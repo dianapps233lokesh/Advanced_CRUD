@@ -12,6 +12,7 @@ class MilestoneSerializer(serializers.ModelSerializer):
 
 class JobCreateSerializer(serializers.ModelSerializer):
     milestones = MilestoneSerializer(many=True)
+    freelancer=serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_freelancer=True),required=False)
 
     class Meta:
         model = Job

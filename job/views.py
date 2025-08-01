@@ -4,7 +4,7 @@ from rest_framework import status, permissions
 from .serializers import JobCreateSerializer,EmployeeStatsSerializer,JobStatsSerializer
 from django.db.models import Count,Sum,Avg
 from django.contrib.auth import get_user_model
-from .models import Job
+from .models import Job,Milestone
 
 User=get_user_model()
 
@@ -22,13 +22,12 @@ class JobCreateView(APIView):
 #total jobs per employees
 class TotalJobsPerEmployerView(APIView):
     def get(self,request):
-        total_jobs_per_employer=User.objects.filter(is_employer=True).annotate(total_jobs=Count('jobs'))        #annotate will add a temporary column named total_jobs with value of total jobs for user
-        # print(total_jobs_per_employer)
-        # for e in total_jobs_per_employer:
-        #     print(e.username, e.total_jobs)
-        serializer=EmployeeStatsSerializer(total_jobs_per_employer,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-    
+        try:
+            total_jobs_per_employer=User.objects.filter(is_employer=True).annotate(total_jobs=Count('jobs'))        #annotate will add a temporary column named total_jobs with value of total jobs for user
+            serializer=EmployeeStatsSerializer(total_jobs_per_employer,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response()
 #Total earnings per freelancer
 class TotalEarningPerFreelancerView(APIView):
     def get(self,request):
@@ -50,3 +49,43 @@ class JobsUnapprovedView(APIView):
         print("pending jobs querysets are:",pending_jobs_qs)
         serializer=JobStatsSerializer(pending_jobs_qs,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
+    
+
+#Complete milestone view
+
+class CompleteMilestoneView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def post(self,request,pk):
+        try:
+            print("pk---",pk)
+            milestone=Milestone.objects.get(id=pk)
+        except Exception as e:
+            return Response(f"no milestone found with the id {pk}")
+        # print("request.user")
+        if milestone.job.freelancer!=request.user:
+            return Response(f"{request.user} freelancer is not assigned to this milestone")
+        
+        milestone.is_completed_by_freelancer=True
+        milestone.save()
+
+        return Response(f"status changed {milestone.is_completed_by_freelancer}",status=status.HTTP_202_ACCEPTED)
+    
+class ApproveMilestoneView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def post(self,request,pk):
+        try:
+            print("pk---",pk)
+            milestone=Milestone.objects.get(id=pk)
+        except Exception as e:
+            return Response(f"no milestone found with the id {pk}")
+        
+        if not milestone.is_completed_by_freelancer:
+            return Response("milestone is not completed by the freelancer")
+        
+        if milestone.job.employer!=request.user:
+            return Response("employer not associated with the job to which milestone is related")
+
+        milestone.is_approved_by_employer=True
+        milestone.save()
+
+        return Response(f"status changed {milestone.is_approved_by_employer}")

@@ -1,5 +1,5 @@
 from django.db import models
-
+from rest_framework.exceptions import ValidationError
 # Create your models here.
 
 
@@ -18,3 +18,15 @@ class Milestone(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_completed_by_freelancer = models.BooleanField(default=False)
     is_approved_by_employer = models.BooleanField(default=False)
+
+    # def save(self,*args,**kwargs):
+    #     if self.is_completed_by_freelancer:
+    #         if not self.job.freelancer:
+    #             raise ValidationError("can't mark milestone complete if not assigned to freelancer")
+            
+    #     if self.is_approved_by_employer:
+    #         if not self.is_completed_by_freelancer:
+    #             raise ValidationError("employer can't approve milestone if not completed")
+
+    def __str__(self):
+        return self.title

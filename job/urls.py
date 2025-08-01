@@ -9,3 +9,10 @@ urlpatterns = [
     path('jobsunapproved/',views.JobsUnapprovedView.as_view()),
     # path('users/', include("portal.urls")),
 ]
+
+#for update
+
+urlpatterns+=[
+    path('freelancercompletemilestone/<str:pk>/',views.CompleteMilestoneView.as_view()),
+    path('employerapprovemilestone/<str:pk>/',views.ApproveMilestoneView.as_view()),
+]
