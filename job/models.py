@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 class Job(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
+    skills=models.ManyToManyField('portal.Skill',related_name='skill_job')
     employer = models.ForeignKey('portal.CustomUser', on_delete=models.CASCADE, limit_choices_to={'is_employer': True}, related_name='jobs')
     freelancer = models.ForeignKey('portal.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'is_freelancer': True}, related_name='freelancer')
     is_archived = models.BooleanField(default=False)

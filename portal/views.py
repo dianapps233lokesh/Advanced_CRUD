@@ -2,12 +2,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import CustomUserSerializer,EmployeeSoftDeleteSerializer
+from .serializers import CustomUserSerializer,AddSkillSerializer
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions
-
+from django.db import transaction
 User=get_user_model()
 
 class UserRegisterView(APIView):
@@ -16,7 +16,9 @@ class UserRegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             return Response({'message': 'User created successfully', 'user_id': user.id}, status=status.HTTP_201_CREATED)
+        print("serializer is not valid")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 
 class LoginAPI(APIView):
@@ -58,34 +60,32 @@ class LoginAPI(APIView):
                         'data':str(e)
                 },status=status.HTTP_400_BAD_REQUEST)
         
-    
-# class DeleteUserView(APIView):
-#     permission_classes=[permissions.IsAdminUser]
-#     def delete(self,request,pk):
-#         try:
-#             user=User.objects.get(id=pk)
-#         except Exception as e:
-#             return Response(f"no user with id {pk}")
-        
-#         user.is_deleted=True
-#         user.save()
 
-#         return Response("user deleted successfully.")
-    
+class EmployerSoftDeleteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-
-
-class EmployerSoftDeleteAPIView(APIView):
-    permission_classes = [permissions.IsAdminUser]
-
-    def patch(self, request, pk):
+    def delete(self, request, pk):
         try:
-            user = User.objects.get(pk=pk, is_employer=True)
-        except User.DoesNotExist:
-            return Response({"detail": "Employer not found."}, status=404)
+            employer = User.objects.get(pk=pk, is_employer=True, is_deleted=False)
+            if employer.username == "default":
+                return Response({"error": "Cannot delete the default employer."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = EmployeeSoftDeleteSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"detail": "Employer soft deleted and jobs reassigned."})
-        return Response(serializer.errors, status=400)
+            employer.delete()  # This triggers the signal
+
+            return Response({"status": "Employer soft-deleted and jobs reassigned."}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Employer not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AddSkillView(APIView):
+    permission_classes=[permissions.IsAdminUser]
+    
+    def post(self,request):
+        try:
+            serializer=AddSkillSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+            return Response("skill created successfully.",status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(f"error {str(e)}",status=status.HTTP_400_BAD_REQUEST)

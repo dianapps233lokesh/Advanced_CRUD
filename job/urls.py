@@ -15,4 +15,5 @@ urlpatterns = [
 urlpatterns+=[
     path('freelancercompletemilestone/<str:pk>/',views.CompleteMilestoneView.as_view()),
     path('employerapprovemilestone/<str:pk>/',views.ApproveMilestoneView.as_view()),
+    path('assignfreelancer/<str:job_id>/',views.AssignFreelancerToJobAPIView.as_view()),
 ]

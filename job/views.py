@@ -5,14 +5,19 @@ from .serializers import JobCreateSerializer,EmployeeStatsSerializer,JobStatsSer
 from django.db.models import Count,Sum,Avg
 from django.contrib.auth import get_user_model
 from .models import Job,Milestone
+from django.db import transaction
 
 User=get_user_model()
 
 class JobCreateView(APIView):
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        serializer = JobCreateSerializer(data=request.data)
+
+        if not request.user.is_employer:
+            return Response("only employer can create jobs",status=status.HTTP_400_BAD_REQUEST)
+        serializer = JobCreateSerializer(data=request.data,context={'request':request})
+
         if serializer.is_valid():
             job = serializer.save()
             # print("serializer data",serializer.data)
@@ -89,3 +94,31 @@ class ApproveMilestoneView(APIView):
         milestone.save()
 
         return Response(f"status changed {milestone.is_approved_by_employer}")
+    
+
+class AssignFreelancerToJobAPIView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+
+    def post(self,request,job_id):
+        try:
+            job=Job.objects.get(id=job_id)
+        except Exception as e:
+            return Response(f"no job found for the id {job_id}",status=status.HTTP_404_NOT_FOUND)
+        req_skills=job.skills.all()
+        print("required skills are:",req_skills)
+        if job.freelancer:
+            return Response("Job has already been assigned a freelancer.")
+        
+        freelancers=User.objects.filter(is_freelancer=True,skill__in=req_skills,is_deleted=False).annotate(match_skill_count=Count('skill')).order_by('-match_skill_count').distinct()
+        print("all freelancers",freelancers)
+        if not freelancers:
+            return Response("No freelancer found for this job",status=status.HTTP_404_NOT_FOUND)
+
+        job.freelancer=freelancers.first()  # this will pick the best freelancer 
+        print(f"the best freelancer is {freelancers.first()}")
+        job.save()
+
+        return Response("successfully assigned freelancer to job",status=status.HTTP_200_OK)
+
+
+        
