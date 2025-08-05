@@ -17,3 +17,10 @@ urlpatterns+=[
     path('employerapprovemilestone/<str:pk>/',views.ApproveMilestoneView.as_view()),
     path('assignfreelancer/<str:job_id>/',views.AssignFreelancerToJobAPIView.as_view()),
 ]
+
+
+#archive jobs download into csv
+
+urlpatterns+=[
+    path("download_archive_jobs/",views.generate_archivejobs_csv)
+]

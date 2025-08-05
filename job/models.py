@@ -13,6 +13,9 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+    def __str__(self):
+        return f"{self.title}__{self.created_at}"
+        
 class Milestone(models.Model):
     job = models.ForeignKey(Job, related_name="milestones", on_delete=models.CASCADE)
     title = models.CharField(max_length=255)

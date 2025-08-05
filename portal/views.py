@@ -1,4 +1,3 @@
-# users/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,6 +7,9 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions
 from django.db import transaction
+from utils.logger import logging
+
+
 User=get_user_model()
 
 class UserRegisterView(APIView):
@@ -15,10 +17,12 @@ class UserRegisterView(APIView):
         serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response({'message': 'User created successfully', 'user_id': user.id}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'User created successfully', 'data': {"user":user.id}}, status=status.HTTP_201_CREATED)
         print("serializer is not valid")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        return Response({ 
+                        'message': f'error',
+                        'data':serializer.errors
+                        },status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginAPI(APIView):
@@ -36,19 +40,19 @@ class LoginAPI(APIView):
         
             user=authenticate(username=user.username, password=request.data['password'])  #returns authenticated user if exists or none
             if user:
-                # logging.info("User details authenticated successfully")
+                logging.info("User details authenticated successfully")
                 refresh=RefreshToken.for_user(user)    #manually token generated here
-                # logging.info(f"Token generated for user")
+                logging.info(f"Token generated for user")
                 # print("refresh token--",str(refresh))
                 return Response({
-                    "message":"Login Successful",
+                    # "message":"Login Successful",
                     "data":{
                         "access_token":str(refresh.access_token),
                         "refresh_token":str(refresh)
                     }
                 },status=status.HTTP_200_OK)
             else:
-                # logging.warning(f"Invalid credentials")
+                logging.warning(f"Invalid credentials")
                 return Response({ 'message':"wrong credentials provided",
                                  'data':None
                     },status=status.HTTP_404_NOT_FOUND)
@@ -67,14 +71,23 @@ class EmployerSoftDeleteView(APIView):
     def delete(self, request, pk):
         try:
             employer = User.objects.get(pk=pk, is_employer=True, is_deleted=False)
+            logging.info(f"employer is {employer} for the id {pk}")
             if employer.username == "default":
-                return Response({"error": "Cannot delete the default employer."}, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response({ 
+                        'message': f"can't delete the default employer",
+                        'data':None
+                        },status=status.HTTP_400_BAD_REQUEST)
             employer.delete()  # This triggers the signal
-
-            return Response({"status": "Employer soft-deleted and jobs reassigned."}, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            return Response({"error": "Employer not found."}, status=status.HTTP_404_NOT_FOUND)
+            logging.info("Soft delete called and signal triggered")
+            return Response({ 
+                        'message': f'user soft delete and jobs reassigned using signal',
+                        'data':{"employer deleted":employer.is_deleted}
+                        },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({ 
+                        # 'message': 'error',
+                        'data':str(e)
+                        },status=status.HTTP_400_BAD_REQUEST)
 
 
 class AddSkillView(APIView):
@@ -85,7 +98,14 @@ class AddSkillView(APIView):
             serializer=AddSkillSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
-            return Response("skill created successfully.",status=status.HTTP_201_CREATED)
+                logging.info("skill added successfully.")
+            return Response({ 
+                        # 'message': f'error {str(e)}',
+                        'data':serializer.data
+                        },status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            return Response(f"error {str(e)}",status=status.HTTP_400_BAD_REQUEST)
+            return Response({ 
+                        'message': f'error {str(e)}',
+                        'data':serializer.errors
+                        },status=status.HTTP_400_BAD_REQUEST)

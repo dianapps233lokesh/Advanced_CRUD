@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import Milestone,Job
 from django.contrib.auth import get_user_model
 from portal.models import Skill
+from utils.logger import logging
 
 User=get_user_model()
 
@@ -33,20 +34,22 @@ class JobCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        print("validated data in job create",validated_data)
+        logging.info(f"validated data in job create {validated_data}")
         skils=validated_data.pop("skills",None)
 
         validated_data['employer']=self.context.get('request').user
         milestones_data = validated_data.pop('milestones',None)
 
-        print("milestones data",milestones_data)
+        logging.info(f"milestones data {milestones_data}")
 
-        print("current user id ",self.context.get('request').user)
+        logging.info(f"current user id  {self.context.get('request').user}")
         job = Job.objects.create(**validated_data)
         if skils:          
             job.skills.set(skils)
+            logging.info("skills set for jobs")
         for milestone in milestones_data:
             Milestone.objects.create(job=job, **milestone)
+            logging.info("milestones created suuccessfully along with job")
 
         return job
 
@@ -62,6 +65,6 @@ class JobStatsSerializer(serializers.ModelSerializer):
     avg_milestone=serializers.DecimalField(max_digits=10,decimal_places=2,read_only=True,required=False)
     class Meta:
         model=Job
-        fields=['id','title','description','employer','freelancer','avg_milestone']
+        fields=['id','title','employer','avg_milestone']
 
 
