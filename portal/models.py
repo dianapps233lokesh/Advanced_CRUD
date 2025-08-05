@@ -14,6 +14,6 @@ class CustomUser(AbstractUser):
     skill=models.ManyToManyField(Skill,related_name='user_skill')
 
 
-    def delete(self):
+    def soft_delete(self):
         self.is_deleted=True
         self.save()

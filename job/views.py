@@ -209,7 +209,7 @@ class AssignFreelancerToJobAPIView(APIView):
 
         return Response({
                 'message':"freelancer assigned successfully",
-                'data':freelancers.first()
+                'data':freelancers.first().username
             },status=status.HTTP_200_OK)
 
 
@@ -237,3 +237,40 @@ def generate_archivejobs_csv(request):
     response['Content-Disposition'] = 'attachment; filename="archived_jobs.csv"'
     
     return response
+
+
+class CompleteMilestonesBulkUpdate(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def post(self,request):
+        try:
+            milestones_ids=request.data.get('milestone_ids',[])
+            logging.info(f"milestones ids provided {milestones_ids}")
+            if not milestones_ids:
+                return Response({
+                    'message':"No milestone ids provided",
+                    'data':milestones_ids
+                },status=status.HTTP_400_BAD_REQUEST)
+            
+            milestones=Milestone.objects.filter(id__in=milestones_ids,job__employer=request.user)
+            logging.info(f"milestones objects for ids provided {milestones}")
+
+            if not milestones:
+                return Response({
+                    'message':"No matching milestones found",
+                    'data':milestones
+                },status=status.HTTP_400_BAD_REQUEST)
+            
+            for milestone in milestones:
+                milestone.is_completed_by_freelancer=True
+            logging.info(f"milestones updated status {[milestone.is_completed_by_freelancer for milestone in milestones]}")
+            Milestone.objects.bulk_update(milestones,['is_completed_by_freelancer'])
+            logging.info("bulk updated successfully")
+            return Response({
+                    'message':f"{len(milestones)} marked as completed milestones",
+                    'data':[milestone.is_completed_by_freelancer for milestone in milestones]
+                },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "message":str(e),
+                "data":None
+            },status=status.HTTP_400_BAD_REQUEST)

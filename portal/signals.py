@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save,pre_delete
 from django.dispatch import receiver
 from .models import CustomUser
 from job.models import Job
@@ -14,3 +14,8 @@ def reassign_jobs_on_soft_delete(sender, instance, **kwargs):
 
         Job.objects.filter(employer=instance).update(employer=default_employer)
         logging.info("signal triggered and jobs are reassigned to the default user")
+
+@receiver(pre_delete, sender=CustomUser)
+def clear_skills_before_user_delete(sender, instance, **kwargs):
+    instance.skill.clear()
+    logging.info("signal triggered and skill table cleared")

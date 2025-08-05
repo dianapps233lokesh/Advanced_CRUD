@@ -77,7 +77,7 @@ class EmployerSoftDeleteView(APIView):
                         'message': f"can't delete the default employer",
                         'data':None
                         },status=status.HTTP_400_BAD_REQUEST)
-            employer.delete()  # This triggers the signal
+            employer.soft_delete()  # This triggers the signal
             logging.info("Soft delete called and signal triggered")
             return Response({ 
                         'message': f'user soft delete and jobs reassigned using signal',
@@ -109,3 +109,27 @@ class AddSkillView(APIView):
                         'message': f'error {str(e)}',
                         'data':serializer.errors
                         },status=status.HTTP_400_BAD_REQUEST)
+        
+class UserDeleteView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+
+    def delete(self,request):
+        try:
+            user=User.objects.get(id=request.user.id)
+            logging.info("user fetched successfuly. ")
+            if user.username == "default":
+                return Response({ 
+                        'message': f"can't delete the default employer",
+                        'data':None
+                        },status=status.HTTP_400_BAD_REQUEST)
+            user.delete()       #this will trigger an pre_delete signal
+            logging.info("user deleted successfully")
+            return Response({
+                'message':"user deleted successfully",
+                "data":None
+            },status=
+            status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'data':str(e),
+            },status=status.HTTP_400_BAD_REQUEST)

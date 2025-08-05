@@ -10,7 +10,7 @@ class SkillNameField(serializers.RelatedField):
     def to_internal_value(self, data):
         # Accept skill name instead of primary key
         # print("data inside to_internal",data)
-        data=data.lower().strip()
+        # data=data.lower().strip()
         logging.info(f"skill after the transformation:{data}")
         skill_obj, _ = Skill.objects.get_or_create(skill=data)
         return skill_obj
