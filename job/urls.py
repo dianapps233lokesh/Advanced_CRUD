@@ -17,6 +17,7 @@ urlpatterns+=[
     path('employerapprovemilestone/<str:pk>/',views.ApproveMilestoneView.as_view()),
     path('assignfreelancer/<str:job_id>/',views.AssignFreelancerToJobAPIView.as_view()),
     path('bulkcompletemilestone/',views.CompleteMilestonesBulkUpdate.as_view()),
+    path('completemilestonesRAW/',views.CompletedMilestonesRAW.as_view()),        #RAW sql
 ]
 
 

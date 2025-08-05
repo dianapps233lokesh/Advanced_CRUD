@@ -274,3 +274,34 @@ class CompleteMilestonesBulkUpdate(APIView):
                 "message":str(e),
                 "data":None
             },status=status.HTTP_400_BAD_REQUEST)
+        
+
+# RAW SQL View
+
+class CompletedMilestonesRAW(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def get(self,request):
+        try:
+            milestones=Milestone.objects.raw('''select m.id,m.title,m.amount 
+                                             from 
+                                             job_milestone as "m"
+                                                join
+                                             job_job as "j"
+                                             on m.job_id=j.id where
+                                             m.is_completed_by_freelancer=true and
+                                             j.employer_id=%s
+                                             ''',[request.user.id])
+            data=[{
+                "id": m.id,
+                "title": m.title,
+                "amount": float(m.amount)
+            }
+            for m in milestones]
+            return Response({
+                'data':data
+            },
+            status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'data':str(e)
+            },status=status.HTTP_400_BAD_REQUEST)
