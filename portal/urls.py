@@ -12,3 +12,9 @@ urlpatterns+=[
     path('skill/add/',views.AddSkillView.as_view()),
     path('delete/',views.UserDeleteView.as_view()),
 ]
+
+#custom managers
+
+urlpatterns+=[
+    path('active/',views.ActiveUsers.as_view()),
+]

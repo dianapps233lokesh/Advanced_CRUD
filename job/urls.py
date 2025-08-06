@@ -24,5 +24,7 @@ urlpatterns+=[
 #archive jobs download into csv
 
 urlpatterns+=[
-    path("download_archive_jobs/",views.generate_archivejobs_csv)
+    path("download_archive_jobs/",views.generate_archivejobs_csv),
+    path("archive_jobs/",views.ArchivedJobsView.as_view()),
+    path("pending_approval/",views.PendingApprovalView.as_view())
 ]

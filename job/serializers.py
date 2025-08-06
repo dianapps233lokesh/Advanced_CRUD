@@ -65,6 +65,6 @@ class JobStatsSerializer(serializers.ModelSerializer):
     avg_milestone=serializers.DecimalField(max_digits=10,decimal_places=2,read_only=True,required=False)
     class Meta:
         model=Job
-        fields=['id','title','employer','avg_milestone']
+        fields=['id','title','employer','avg_milestone','is_archived']
 
 

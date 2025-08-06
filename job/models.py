@@ -1,7 +1,12 @@
 from django.db import models
 from rest_framework.exceptions import ValidationError
 # Create your models here.
-
+from django.db.models import CheckConstraint
+from django.db.models import Q
+from django.contrib.postgres.indexes import GinIndex
+class ArchivedJobs(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_archived=True)
 
 class Job(models.Model):
     title = models.CharField(max_length=255)
@@ -11,10 +16,16 @@ class Job(models.Model):
     freelancer = models.ForeignKey('portal.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'is_freelancer': True}, related_name='freelancer')
     is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects=models.Manager()
+    archived_jobs=ArchivedJobs()
 
 
     def __str__(self):
         return f"{self.title}__{self.created_at}"
+    
+class PendingMilestones(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_approved_by_employer=False)
         
 class Milestone(models.Model):
     job = models.ForeignKey(Job, related_name="milestones", on_delete=models.CASCADE)
@@ -22,6 +33,8 @@ class Milestone(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_completed_by_freelancer = models.BooleanField(default=False)
     is_approved_by_employer = models.BooleanField(default=False)
+    objects=models.Manager()
+    pending_milestones=PendingMilestones()
 
     # def save(self,*args,**kwargs):
     #     if self.is_completed_by_freelancer:
@@ -34,3 +47,13 @@ class Milestone(models.Model):
 
     def __str__(self):
         return self.title
+    
+    class Meta:
+        constraints=[CheckConstraint(
+            check=(Q(is_approved_by_employer=False) | Q(is_completed_by_freelancer=True)),
+            name="approve_only_if_milestone_completed"
+        )]
+
+        indexes=[
+            GinIndex(fields=['title'],name="milestone_title_trgm",opclasses=["gin_trgm_ops"])
+        ]

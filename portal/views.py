@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions
 from django.db import transaction
 from utils.logger import logging
+from .models import CustomUser
 
 
 User=get_user_model()
@@ -18,7 +19,7 @@ class UserRegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             return Response({'message': 'User created successfully', 'data': {"user":user.id}}, status=status.HTTP_201_CREATED)
-        print("serializer is not valid")
+        # logging("serializer is not valid")
         return Response({ 
                         'message': f'error',
                         'data':serializer.errors
@@ -28,22 +29,18 @@ class UserRegisterView(APIView):
 class LoginAPI(APIView):
     def post(self,request):
         try:         
-            try:
-                # logging.info("Enter into the if block of serializer valid")
-                print("user email is :",request.data['email'])
-                user=User.objects.get(email=request.data['email'])  #getting user based upon email from db because in authenticate username is required not email
-                print("user is ---",user)
-            except Exception as e:
-                return Response({ 'message':f"User not found for {request.data['email']}",
-                        'data':str(e)},
-                        status=status.HTTP_404_NOT_FOUND)
+        
+            # logging.info("Enter into the if block of serializer valid")
+            logging.info(f"user email is : {request.data['email']}")
+            user=User.objects.get(email=request.data['email'])  #getting user based upon email from db because in authenticate username is required not email
+            logging.info(f"user is --- {user}")
+       
         
             user=authenticate(username=user.username, password=request.data['password'])  #returns authenticated user if exists or none
             if user:
                 logging.info("User details authenticated successfully")
                 refresh=RefreshToken.for_user(user)    #manually token generated here
                 logging.info(f"Token generated for user")
-                # print("refresh token--",str(refresh))
                 return Response({
                     # "message":"Login Successful",
                     "data":{
@@ -56,7 +53,6 @@ class LoginAPI(APIView):
                 return Response({ 'message':"wrong credentials provided",
                                  'data':None
                     },status=status.HTTP_404_NOT_FOUND)
-          
         except Exception as e:
             return Response(
                 { 
@@ -81,7 +77,7 @@ class EmployerSoftDeleteView(APIView):
             logging.info("Soft delete called and signal triggered")
             return Response({ 
                         'message': f'user soft delete and jobs reassigned using signal',
-                        'data':{"employer deleted":employer.is_deleted}
+                        'data':None
                         },status=status.HTTP_200_OK)
         except Exception as e:
             return Response({ 
@@ -133,3 +129,24 @@ class UserDeleteView(APIView):
             return Response({
                 'data':str(e),
             },status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ActiveUsers(APIView):
+    permission_classes=[permissions.IsAdminUser]
+    def get(self,request):
+        try:
+            logging.info("Fetching all the active users")
+            users=User.objects.all()
+            logging.info(f"users are {users}")
+            serializer=CustomUserSerializer(users,many=True)
+            logging.info("Serializer created")
+            # if serializer.is_valid():
+            return Response({
+                'data':serializer.data
+            },
+            status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                    'data':str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST)

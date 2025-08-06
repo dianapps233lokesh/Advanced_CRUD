@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help='this automatically archives jobs that are created 30 days before and whose milestones are approved and completed'
 
     def handle(self, *args, **options):
-        cutoff=timezone.now()-timedelta(days=1)
+        cutoff=timezone.now()-timedelta(days=30)
         ist = pytz.timezone("Asia/Kolkata")
         cutoff_ist = cutoff.astimezone(ist)
         logging.info(f"cutoff before {cutoff}")

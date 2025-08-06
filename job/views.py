@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .serializers import JobCreateSerializer,EmployeeStatsSerializer,JobStatsSerializer
+from .serializers import JobCreateSerializer,EmployeeStatsSerializer,JobStatsSerializer,MilestoneSerializer
 from django.db.models import Count,Sum,Avg,Q
 from django.contrib.auth import get_user_model
 from .models import Job,Milestone
@@ -148,27 +148,33 @@ class ApproveMilestoneView(APIView):
     permission_classes=[permissions.IsAuthenticated]
     def post(self,request,pk):
         try:
-            milestone=Milestone.objects.get(id=pk)
-        except Exception as e:
-            return Response({ 
-                        'message': f'error. {str(e)}',
-                        'data':None
-                        },status=status.HTTP_404_NOT_FOUND)
-        
-        if not milestone.is_completed_by_freelancer:
-            return Response({ 
-                        'message': 'Milestone not completed by the freelancer',
-                        'data':milestone.objects.all()
-                        },status=status.HTTP_400_BAD_REQUEST)
-        
-        if milestone.job.employer!=request.user:
-            return Response({ 
-                        'message': 'this employer is not associated to this job',
-                        'data':milestone.objects.all()
-                        },status=status.HTTP_400_BAD_REQUEST)
+            try:
+                milestone=Milestone.objects.get(id=pk)
+            except Exception as e:
+                return Response({ 
+                            'message': f'error. {str(e)}',
+                            'data':None
+                            },status=status.HTTP_404_NOT_FOUND)
+            
+            # if not milestone.is_completed_by_freelancer:
+            #     return Response({ 
+            #                 'message': 'Milestone not completed by the freelancer',
+            #                 'data':milestone.objects.all()
+            #                 },status=status.HTTP_400_BAD_REQUEST)
+            
+            if milestone.job.employer!=request.user:
+                return Response({ 
+                            'message': 'this employer is not associated to this job',
+                            'data':milestone.objects.all()
+                            },status=status.HTTP_400_BAD_REQUEST)
 
-        milestone.is_approved_by_employer=True
-        milestone.save()
+            milestone.is_approved_by_employer=True
+            milestone.save()
+            
+        except Exception as e:
+            return Response({
+                "data":str(e)
+            },status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
                 'message':"approved milestone of the completed user",
@@ -305,3 +311,34 @@ class CompletedMilestonesRAW(APIView):
             return Response({
                 'data':str(e)
             },status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ArchivedJobsView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def get(self,request):
+        try:
+            jobs=Job.archived_jobs.filter(employer=request.user)
+            logging.info(f"all the archived jobs {jobs}")
+            serializer=JobStatsSerializer(jobs,many=True)
+            return Response({
+                'data':serializer.data
+            },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'data':str(e)
+            },status=status.HTTP_200_OK)
+        
+class PendingApprovalView(APIView):
+    permission_classes=[permissions.IsAuthenticated]
+    def get(self,request):
+        try:
+            milestones=Milestone.pending_milestones.filter(job__employer=request.user)
+            logging.info(f"all tthe  pending milestones are {milestones}")
+            serializer=MilestoneSerializer(milestones,many=True)
+            return Response({
+                'data':serializer.data
+            },status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'data':str(e)
+            },status=status.HTTP_200_OK)
