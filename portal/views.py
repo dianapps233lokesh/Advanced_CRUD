@@ -136,7 +136,7 @@ class ActiveUsers(APIView):
     def get(self,request):
         try:
             logging.info("Fetching all the active users")
-            users=User.objects.all()
+            users=User.only_active.all()
             logging.info(f"users are {users}")
             serializer=CustomUserSerializer(users,many=True)
             logging.info("Serializer created")
